@@ -5247,6 +5247,12 @@ def _voice_tts_enabled() -> bool:
     return os.environ.get("HERMES_VOICE_TTS", "").strip() == "1"
 
 
+def _voice_record_key() -> str:
+    voice_cfg = _load_cfg().get("voice") or {}
+    raw = voice_cfg.get("record_key", "ctrl+b")
+    return str(raw or "ctrl+b")
+
+
 @method("voice.toggle")
 def _(rid, params: dict) -> dict:
     """CLI parity for the ``/voice`` slash command.
@@ -5269,6 +5275,7 @@ def _(rid, params: dict) -> dict:
         # isn't working ("STT provider: MISSING ..." is the common case).
         payload: dict = {
             "enabled": _voice_mode_enabled(),
+            "record_key": _voice_record_key(),
             "tts": _voice_tts_enabled(),
         }
         try:
@@ -5305,7 +5312,10 @@ def _(rid, params: dict) -> dict:
             except Exception as e:
                 logger.warning("voice: stop_continuous failed during toggle off: %s", e)
 
-        return _ok(rid, {"enabled": enabled, "tts": _voice_tts_enabled()})
+        return _ok(
+            rid,
+            {"enabled": enabled, "record_key": _voice_record_key(), "tts": _voice_tts_enabled()},
+        )
 
     if action == "tts":
         if not _voice_mode_enabled():
@@ -5313,7 +5323,7 @@ def _(rid, params: dict) -> dict:
         new_value = not _voice_tts_enabled()
         # Runtime-only flag (CLI parity) — see voice.toggle on/off above.
         os.environ["HERMES_VOICE_TTS"] = "1" if new_value else "0"
-        return _ok(rid, {"enabled": True, "tts": new_value})
+        return _ok(rid, {"enabled": True, "record_key": _voice_record_key(), "tts": new_value})
 
     return _err(rid, 4013, f"unknown voice action: {action}")
 

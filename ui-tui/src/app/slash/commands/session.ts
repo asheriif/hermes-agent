@@ -10,6 +10,7 @@ import type {
   SessionUsageResponse,
   VoiceToggleResponse
 } from '../../../gatewayTypes.js'
+import { formatVoiceRecordKey } from '../../../lib/platform.js'
 import { fmtK } from '../../../lib/text.js'
 import type { PanelSection } from '../../../types.js'
 import { DEFAULT_INDICATOR_STYLE, INDICATOR_STYLES, type IndicatorStyle } from '../../interfaces.js'
@@ -220,6 +221,7 @@ export const sessionCommands: SlashCommand[] = [
       ctx.gateway.rpc<VoiceToggleResponse>('voice.toggle', { action }).then(
         ctx.guarded<VoiceToggleResponse>(r => {
           ctx.voice.setVoiceEnabled(!!r.enabled)
+          const recordKeyDisplay = formatVoiceRecordKey(r.record_key ?? ctx.voice.recordKey)
 
           // Match CLI's _show_voice_status / _enable_voice_mode /
           // _toggle_voice_tts output shape so users don't have to learn
@@ -230,7 +232,7 @@ export const sessionCommands: SlashCommand[] = [
             ctx.transcript.sys('Voice Mode Status')
             ctx.transcript.sys(`  Mode:       ${mode}`)
             ctx.transcript.sys(`  TTS:        ${tts}`)
-            ctx.transcript.sys('  Record key: Ctrl+B')
+            ctx.transcript.sys(`  Record key: ${recordKeyDisplay}`)
 
             // CLI's "Requirements:" block — surfaces STT/audio setup issues
             // so the user sees "STT provider: MISSING ..." instead of
@@ -259,7 +261,7 @@ export const sessionCommands: SlashCommand[] = [
           if (r.enabled) {
             const tts = r.tts ? ' (TTS enabled)' : ''
             ctx.transcript.sys(`Voice mode enabled${tts}`)
-            ctx.transcript.sys('  Ctrl+B to start/stop recording')
+            ctx.transcript.sys(`  ${recordKeyDisplay} to start/stop recording`)
             ctx.transcript.sys('  /voice tts  to toggle speech output')
             ctx.transcript.sys('  /voice off  to disable voice mode')
           } else {

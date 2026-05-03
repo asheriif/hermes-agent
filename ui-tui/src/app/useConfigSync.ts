@@ -7,6 +7,7 @@ import type {
   ConfigMtimeResponse,
   ReloadMcpResponse
 } from '../gatewayTypes.js'
+import { normalizeVoiceRecordKey } from '../lib/platform.js'
 import { asRpcResult } from '../lib/rpc.js'
 
 import {
@@ -109,7 +110,20 @@ export const applyDisplay = (cfg: ConfigFullResponse | null, setBell: (v: boolea
   })
 }
 
-export function useConfigSync({ gw, setBellOnComplete, setVoiceEnabled, sid }: UseConfigSyncOptions) {
+export const applyVoiceRecordKey = (cfg: ConfigFullResponse | null, setVoiceRecordKey: (v: string) => void) => {
+  setVoiceRecordKey(normalizeVoiceRecordKey(cfg?.config?.voice?.record_key))
+}
+
+const applyFullConfig = (
+  cfg: ConfigFullResponse | null,
+  setBell: (v: boolean) => void,
+  setVoiceRecordKey: (v: string) => void
+) => {
+  applyDisplay(cfg, setBell)
+  applyVoiceRecordKey(cfg, setVoiceRecordKey)
+}
+
+export function useConfigSync({ gw, setBellOnComplete, setVoiceEnabled, setVoiceRecordKey, sid }: UseConfigSyncOptions) {
   const mtimeRef = useRef(0)
 
   useEffect(() => {
@@ -125,8 +139,10 @@ export function useConfigSync({ gw, setBellOnComplete, setVoiceEnabled, sid }: U
     quietRpc<ConfigMtimeResponse>(gw, 'config.get', { key: 'mtime' }).then(r => {
       mtimeRef.current = Number(r?.mtime ?? 0)
     })
-    quietRpc<ConfigFullResponse>(gw, 'config.get', { key: 'full' }).then(r => applyDisplay(r, setBellOnComplete))
-  }, [gw, setBellOnComplete, setVoiceEnabled, sid])
+    quietRpc<ConfigFullResponse>(gw, 'config.get', { key: 'full' }).then(r =>
+      applyFullConfig(r, setBellOnComplete, setVoiceRecordKey)
+    )
+  }, [gw, setBellOnComplete, setVoiceEnabled, setVoiceRecordKey, sid])
 
   useEffect(() => {
     if (!sid) {
@@ -154,17 +170,20 @@ export function useConfigSync({ gw, setBellOnComplete, setVoiceEnabled, sid }: U
         quietRpc<ReloadMcpResponse>(gw, 'reload.mcp', { session_id: sid, confirm: true }).then(
           r => r && turnController.pushActivity('MCP reloaded after config change')
         )
-        quietRpc<ConfigFullResponse>(gw, 'config.get', { key: 'full' }).then(r => applyDisplay(r, setBellOnComplete))
+        quietRpc<ConfigFullResponse>(gw, 'config.get', { key: 'full' }).then(r =>
+          applyFullConfig(r, setBellOnComplete, setVoiceRecordKey)
+        )
       })
     }, MTIME_POLL_MS)
 
     return () => clearInterval(id)
-  }, [gw, setBellOnComplete, sid])
+  }, [gw, setBellOnComplete, setVoiceRecordKey, sid])
 }
 
 export interface UseConfigSyncOptions {
   gw: GatewayClient
   setBellOnComplete: (v: boolean) => void
   setVoiceEnabled: (v: boolean) => void
+  setVoiceRecordKey: (v: string) => void
   sid: null | string
 }

@@ -50,14 +50,71 @@ export const isCopyShortcut = (
     // even though raw Ctrl+C should remain interrupt on local macOS.
     (isMac && key.ctrl && (key.meta || key.super === true)))
 
+export const DEFAULT_VOICE_RECORD_KEY = 'ctrl+b'
+
+type VoiceRecordModifier = 'alt' | 'ctrl'
+
+interface VoiceRecordKeySpec {
+  key: string
+  modifier: VoiceRecordModifier
+}
+
+const parseVoiceRecordKey = (raw: unknown): VoiceRecordKeySpec => {
+  if (typeof raw !== 'string') {
+    return { key: 'b', modifier: 'ctrl' }
+  }
+
+  const match = raw.trim().toLowerCase().match(/^(ctrl|control|c|alt|option|meta|a)\s*\+\s*(.)$/)
+
+  if (!match) {
+    return { key: 'b', modifier: 'ctrl' }
+  }
+
+  const modifier: VoiceRecordModifier = ['alt', 'option', 'meta', 'a'].includes(match[1]) ? 'alt' : 'ctrl'
+
+  return { key: match[2], modifier }
+}
+
+export const normalizeVoiceRecordKey = (raw: unknown): string => {
+  const spec = parseVoiceRecordKey(raw)
+
+  return `${spec.modifier}+${spec.key}`
+}
+
+export const formatVoiceRecordKey = (raw: unknown): string => {
+  const spec = parseVoiceRecordKey(raw)
+  const modifier = spec.modifier === 'ctrl' ? 'Ctrl' : 'Alt'
+
+  return `${modifier}+${spec.key.toUpperCase()}`
+}
+
 /**
- * Voice recording toggle key (Ctrl+B).
+ * Voice recording toggle key from config.yaml's voice.record_key.
  *
- * Documented as "Ctrl+B" everywhere: tips.py, config.yaml's voice.record_key
- * default, and the Python CLI prompt_toolkit handler. We accept raw Ctrl+B on
- * every platform so the TUI matches those docs. On macOS we additionally
- * accept Cmd+B (the platform action modifier) so existing macOS muscle memory
- * keeps working.
+ * Supported config spellings mirror the classic CLI's documented forms:
+ * `ctrl+x` and `alt+x` (case-insensitive). Invalid values fall back to the
+ * config default, Ctrl+B. For the default chord we keep the existing macOS
+ * action-modifier+B compatibility; explicit non-default chords must match the
+ * configured modifier/key so the TUI does not keep hardcoding Ctrl+B.
  */
-export const isVoiceToggleKey = (key: { ctrl: boolean; meta: boolean; super?: boolean }, ch: string): boolean =>
-  (key.ctrl || isActionMod(key)) && ch.toLowerCase() === 'b'
+export const isVoiceToggleKey = (
+  key: { ctrl: boolean; meta: boolean; super?: boolean },
+  ch: string,
+  recordKey: string = DEFAULT_VOICE_RECORD_KEY
+): boolean => {
+  const spec = parseVoiceRecordKey(recordKey)
+  const target = ch.toLowerCase() === spec.key
+
+  if (!target) {
+    return false
+  }
+
+  if (spec.modifier === 'alt') {
+    return key.meta && !key.ctrl && key.super !== true
+  }
+
+  return (
+    key.ctrl ||
+    (normalizeVoiceRecordKey(recordKey) === DEFAULT_VOICE_RECORD_KEY && isActionMod(key))
+  )
+}

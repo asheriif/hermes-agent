@@ -60,6 +60,20 @@ describe('isCopyShortcut', () => {
 })
 
 describe('isVoiceToggleKey', () => {
+  it('matches configured Ctrl key instead of hardcoded Ctrl+B', async () => {
+    const { isVoiceToggleKey } = await importPlatform('linux')
+
+    expect(isVoiceToggleKey({ ctrl: true, meta: false, super: false }, 'o', 'ctrl+o')).toBe(true)
+    expect(isVoiceToggleKey({ ctrl: true, meta: false, super: false }, 'b', 'ctrl+o')).toBe(false)
+  })
+
+  it('matches configured Alt key chords', async () => {
+    const { isVoiceToggleKey } = await importPlatform('linux')
+
+    expect(isVoiceToggleKey({ ctrl: false, meta: true, super: false }, 'o', 'alt+o')).toBe(true)
+    expect(isVoiceToggleKey({ ctrl: true, meta: false, super: false }, 'o', 'alt+o')).toBe(false)
+  })
+
   it('matches raw Ctrl+B on macOS (doc-default across platforms)', async () => {
     const { isVoiceToggleKey } = await importPlatform('darwin')
 

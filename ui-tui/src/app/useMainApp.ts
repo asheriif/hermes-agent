@@ -17,7 +17,7 @@ import type {
 import { useGitBranch } from '../hooks/useGitBranch.js'
 import { useVirtualHistory } from '../hooks/useVirtualHistory.js'
 import { appendTranscriptMessage } from '../lib/messages.js'
-import { isMac } from '../lib/platform.js'
+import { DEFAULT_VOICE_RECORD_KEY, isMac } from '../lib/platform.js'
 import { asRpcResult, rpcErrorMessage } from '../lib/rpc.js'
 import { terminalParityHints } from '../lib/terminalParity.js'
 import { buildToolTrailLine, sameToolTrailGroup, toolTrailLabel } from '../lib/text.js'
@@ -101,6 +101,7 @@ export function useMainApp(gw: GatewayClient) {
   const [stickyPrompt, setStickyPrompt] = useState('')
   const [catalog, setCatalog] = useState<null | SlashCatalog>(null)
   const [voiceEnabled, setVoiceEnabled] = useState(false)
+  const [voiceRecordKey, setVoiceRecordKey] = useState(DEFAULT_VOICE_RECORD_KEY)
   const [voiceRecording, setVoiceRecording] = useState(false)
   const [voiceProcessing, setVoiceProcessing] = useState(false)
   const [sessionStartedAt, setSessionStartedAt] = useState(() => Date.now())
@@ -384,7 +385,7 @@ export function useMainApp(gw: GatewayClient) {
     }
   }, [ui.busy])
 
-  useConfigSync({ gw, setBellOnComplete, setVoiceEnabled, sid: ui.sid })
+  useConfigSync({ gw, setBellOnComplete, setVoiceEnabled, setVoiceRecordKey, sid: ui.sid })
 
   // Tab title: `⚠` waiting on approval/sudo/secret/clarify, `⏳` busy, `✓` idle.
   const model = ui.info?.model?.replace(/^.*\//, '') ?? ''
@@ -529,6 +530,7 @@ export function useMainApp(gw: GatewayClient) {
     terminal: { hasSelection, scrollRef, scrollWithSelection, selection, stdout },
     voice: {
       enabled: voiceEnabled,
+      recordKey: voiceRecordKey,
       recording: voiceRecording,
       setProcessing: setVoiceProcessing,
       setRecording: setVoiceRecording,
@@ -632,7 +634,7 @@ export function useMainApp(gw: GatewayClient) {
         },
         slashFlightRef,
         transcript: { page, panel, send, setHistoryItems, sys, trimLastExchange: session.trimLastExchange },
-        voice: { setVoiceEnabled }
+        voice: { recordKey: voiceRecordKey, setVoiceEnabled }
       }),
     [
       catalog,
@@ -648,7 +650,8 @@ export function useMainApp(gw: GatewayClient) {
       selection,
       send,
       session,
-      sys
+      sys,
+      voiceRecordKey
     ]
   )
 

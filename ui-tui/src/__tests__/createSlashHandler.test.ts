@@ -173,6 +173,28 @@ describe('createSlashHandler', () => {
     expect(ctx.transcript.sys).toHaveBeenCalledWith(expect.stringContaining('usage: /skills'))
   })
 
+  it('/voice status displays the configured record key from the gateway', async () => {
+    const rpc = vi.fn(() => Promise.resolve({ enabled: false, record_key: 'ctrl+o', tts: false }))
+    const ctx = buildCtx({ gateway: { ...buildGateway(), rpc } })
+
+    expect(createSlashHandler(ctx)('/voice status')).toBe(true)
+
+    await vi.waitFor(() => {
+      expect(ctx.transcript.sys).toHaveBeenCalledWith('  Record key: Ctrl+O')
+    })
+  })
+
+  it('/voice on displays the configured record key from the gateway', async () => {
+    const rpc = vi.fn(() => Promise.resolve({ enabled: true, record_key: 'alt+o', tts: false }))
+    const ctx = buildCtx({ gateway: { ...buildGateway(), rpc } })
+
+    expect(createSlashHandler(ctx)('/voice on')).toBe(true)
+
+    await vi.waitFor(() => {
+      expect(ctx.transcript.sys).toHaveBeenCalledWith('  Alt+O to start/stop recording')
+    })
+  })
+
   it('cycles details mode and persists it', async () => {
     const ctx = buildCtx()
 
@@ -648,6 +670,7 @@ const buildTranscript = () => ({
 })
 
 const buildVoice = () => ({
+  recordKey: 'ctrl+b',
   setVoiceEnabled: vi.fn()
 })
 

@@ -210,6 +210,7 @@ export interface InputHandlerContext {
   }
   voice: {
     enabled: boolean
+    recordKey: string
     recording: boolean
     setProcessing: StateSetter<boolean>
     setRecording: StateSetter<boolean>
@@ -290,6 +291,7 @@ export interface SlashHandlerContext {
     trimLastExchange: (items: Msg[]) => Msg[]
   }
   voice: {
+    recordKey: string
     setVoiceEnabled: StateSetter<boolean>
   }
 }
